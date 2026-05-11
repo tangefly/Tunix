@@ -13,8 +13,10 @@ def load_model(model_path):
     
     model_config = AutoConfig.from_pretrained(model_path)
 
+    processor = None
     if type(model_config) in AutoModelForImageTextToText._model_mapping.keys():  # image-text
         load_class = AutoModelForImageTextToText
+        processor = AutoProcessor.from_pretrained(model_path)
     elif type(model_config) in AutoModelForSeq2SeqLM._model_mapping.keys():  # audio-text
         load_class = AutoModelForSeq2SeqLM
     elif type(model_config) in AutoModelForTextToWaveform._model_mapping.keys():  # audio-text for qwen omni
@@ -22,11 +24,7 @@ def load_model(model_path):
     else:
         load_class = AutoModelForCausalLM
 
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_path,
-        use_fast=True,
-        trust_remote_code=True
-    )
+    tokenizer = AutoTokenizer.from_pretrained(model_path)
 
     if torch.cuda.is_available():
         device_map = "auto"
@@ -45,4 +43,4 @@ def load_model(model_path):
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    return model, tokenizer
+    return model, tokenizer, processor

@@ -1,19 +1,25 @@
-from transformers import Qwen3VLForConditionalGeneration, AutoProcessor
-
-# default: Load the model on the available device(s)
-model = Qwen3VLForConditionalGeneration.from_pretrained(
-    "/home/tanger/workspace/models/Qwen3-VL-4B-Instruct", dtype="auto", device_map="auto"
+from threading import Thread
+from transformers import (
+    Qwen3VLForConditionalGeneration,
+    AutoProcessor,
+    TextIteratorStreamer,
 )
 
-# We recommend enabling flash_attention_2 for better acceleration and memory saving, especially in multi-image and video scenarios.
-# model = Qwen3VLForConditionalGeneration.from_pretrained(
-#     "Qwen/Qwen3-VL-4B-Instruct",
-#     dtype=torch.bfloat16,
-#     attn_implementation="flash_attention_2",
-#     device_map="auto",
-# )
+from tunix.model import load_model
 
-processor = AutoProcessor.from_pretrained("/home/tanger/workspace/models/Qwen3-VL-4B-Instruct")
+model_path = "/home/tanger/workspace/models/Qwen3-VL-4B-Instruct"
+
+# load model
+model = Qwen3VLForConditionalGeneration.from_pretrained(
+    model_path,
+    torch_dtype="auto",
+    device_map="auto",
+)
+
+# load processor
+processor = AutoProcessor.from_pretrained(model_path)
+
+model, processor = load_model(model_path)
 
 messages = [
     {
@@ -23,27 +29,47 @@ messages = [
                 "type": "image",
                 "image": "test.png",
             },
-            {"type": "text", "text": "描述这张图片。"},
+            {
+                "type": "text",
+                "text": "描述这张图片。",
+            },
         ],
     }
 ]
 
-# Preparation for inference
+# build inputs
 inputs = processor.apply_chat_template(
     messages,
     tokenize=True,
     add_generation_prompt=True,
     return_dict=True,
-    return_tensors="pt"
+    return_tensors="pt",
 )
+
 inputs = inputs.to(model.device)
 
-# Inference: Generation of the output
-generated_ids = model.generate(**inputs, max_new_tokens=128)
-generated_ids_trimmed = [
-    out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
-]
-output_text = processor.batch_decode(
-    generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
+# streamer
+streamer = TextIteratorStreamer(
+    processor.tokenizer,
+    skip_prompt=True,
+    skip_special_tokens=True,
 )
-print(output_text)
+
+# generation kwargs
+generation_kwargs = dict(
+    **inputs,
+    max_new_tokens=128,
+    streamer=streamer,
+)
+
+# run generation in another thread
+thread = Thread(target=model.generate, kwargs=generation_kwargs)
+thread.start()
+
+# stream output
+print("Assistant: ", end="", flush=True)
+
+for new_text in streamer:
+    print(new_text, end="", flush=True)
+
+print()
