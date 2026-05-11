@@ -4,8 +4,8 @@ import os
 import torch
 import unittest
 
-from src.data.dataset import SFTDataset
-from Tunix.src.test_dataset import IGNORE_INDEX
+from tunix.data.dataset import SFTDataset
+from Tunix.tunix.test_dataset import IGNORE_INDEX
 
 
 class MockTokenizer:
@@ -119,7 +119,7 @@ class TestSFTDataset(unittest.TestCase):
 
     def test_predict_mask_matches_assistant_role(self):
         """Use segment info to check that only assistant segments are predicted."""
-        from Tunix.src.test_dataset import get_segments
+        from Tunix.tunix.test_dataset import get_segments
 
         ds = SFTDataset(self.data_path, self.tokenizer, max_length=1024)
         item = ds[1]

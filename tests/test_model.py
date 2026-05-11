@@ -1,7 +1,5 @@
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
-
-from model import load_model
+from tunix.model import load_model
 
 model_path = "/home/tanger/workspace/models/Qwen3-VL-4B-Instruct"
 

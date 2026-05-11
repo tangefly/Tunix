@@ -54,7 +54,7 @@ def _load_model(model_path):
 
         model, tokenizer = load_model(model_path)
 
-        model, tokenizer = model.eval()
+        model = model.eval()
         current_lora = None
 
         return f"✅ Base model loaded: {model_path}"
