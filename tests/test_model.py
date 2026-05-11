@@ -1,52 +1,49 @@
-import torch
-from tunix.model import load_model
+from transformers import Qwen3VLForConditionalGeneration, AutoProcessor
 
-model_path = "/home/tanger/workspace/models/Qwen3-VL-4B-Instruct"
+# default: Load the model on the available device(s)
+model = Qwen3VLForConditionalGeneration.from_pretrained(
+    "/home/tanger/workspace/models/Qwen3-VL-4B-Instruct", dtype="auto", device_map="auto"
+)
 
-model, tokenizer = load_model(model_path)
+# We recommend enabling flash_attention_2 for better acceleration and memory saving, especially in multi-image and video scenarios.
+# model = Qwen3VLForConditionalGeneration.from_pretrained(
+#     "Qwen/Qwen3-VL-4B-Instruct",
+#     dtype=torch.bfloat16,
+#     attn_implementation="flash_attention_2",
+#     device_map="auto",
+# )
 
-model.eval()
+processor = AutoProcessor.from_pretrained("/home/tanger/workspace/models/Qwen3-VL-4B-Instruct")
 
-# test question
 messages = [
     {
         "role": "user",
-        "content": "你是谁？请简单介绍一下自己。"
+        "content": [
+            {
+                "type": "image",
+                "image": "test.png",
+            },
+            {"type": "text", "text": "描述这张图片。"},
+        ],
     }
 ]
 
-# build prompt
-text = tokenizer.apply_chat_template(
+# Preparation for inference
+inputs = processor.apply_chat_template(
     messages,
-    tokenize=False,
+    tokenize=True,
     add_generation_prompt=True,
-    # enable_thinking=False
-)
-
-print(f"text: {text}")
-
-# tokenize
-inputs = tokenizer(
-    text,
+    return_dict=True,
     return_tensors="pt"
-).to(model.device)
-
-# generate
-with torch.no_grad():
-    outputs = model.generate(
-        **inputs,
-        max_new_tokens=2048,
-        do_sample=True,
-        temperature=0.7,
-        top_p=0.9,
-        pad_token_id=tokenizer.eos_token_id
-    )
-
-# decode only generated part
-response = tokenizer.decode(
-    outputs[0][inputs.input_ids.shape[1]:],
-    skip_special_tokens=False
 )
+inputs = inputs.to(model.device)
 
-print("\nAssistant:")
-print(response)
+# Inference: Generation of the output
+generated_ids = model.generate(**inputs, max_new_tokens=128)
+generated_ids_trimmed = [
+    out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
+]
+output_text = processor.batch_decode(
+    generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
+)
+print(output_text)

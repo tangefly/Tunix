@@ -3,7 +3,7 @@ import torch
 import gc
 import re
 from threading import Thread
-from transformers import AutoTokenizer, AutoModelForCausalLM, TextIteratorStreamer
+from transformers import TextIteratorStreamer
 from peft import PeftModel
 
 from model import load_model
