@@ -6,6 +6,8 @@ from threading import Thread
 from transformers import AutoTokenizer, AutoModelForCausalLM, TextIteratorStreamer
 from peft import PeftModel
 
+from model import load_model
+
 model = None
 tokenizer = None
 current_lora = None
@@ -22,42 +24,37 @@ def remove_details(text):
     return new_text.strip()
 
 def extract_think(text):
-    think = re.findall(r"<think>(.*?)</think>", text, re.S)
-    answer = re.sub(r"<think>.*?</think>", "", text, flags=re.S)
-    return "\n".join(think).strip(), answer.strip()
 
-def load_model(model_path):
+    think = ""
+
+    if "<think>" in text and "</think>" in text:
+        match = re.search(r"<think>(.*?)</think>", text, re.S)
+        if match:
+            think = match.group(1).strip()
+
+        answer = re.sub(r"<think>.*?</think>", "", text, flags=re.S).strip()
+
+    elif "</think>" in text:
+        parts = text.split("</think>", 1)
+        think = parts[0].strip()
+        answer = parts[1].strip() if len(parts) > 1 else ""
+
+    else:
+        answer = text.strip()
+
+    return think, answer
+
+def _load_model(model_path):
     global model, tokenizer, current_lora
 
     try:
-        offload_model()
+        _offload_model()
 
         print(f"Loading model from: {model_path}")
 
-        tokenizer = AutoTokenizer.from_pretrained(
-            model_path,
-            use_fast=True,
-            trust_remote_code=True
-        )
+        model, tokenizer = load_model(model_path)
 
-        if torch.cuda.is_available():
-            device_map = "auto"
-            torch_dtype = torch.float16
-        else:
-            device_map = None
-            torch_dtype = torch.float32
-
-        model = AutoModelForCausalLM.from_pretrained(
-            model_path,
-            torch_dtype=torch_dtype,
-            device_map=device_map,
-            trust_remote_code=True
-        )
-
-        if tokenizer.pad_token is None:
-            tokenizer.pad_token = tokenizer.eos_token
-
-        model.eval()
+        model, tokenizer = model.eval()
         current_lora = None
 
         return f"✅ Base model loaded: {model_path}"
@@ -65,7 +62,7 @@ def load_model(model_path):
     except Exception as e:
         return f"❌ Load failed: {str(e)}"
 
-def load_lora(lora_path):
+def _load_lora(lora_path):
     global model, current_lora
 
     try:
@@ -93,7 +90,7 @@ def load_lora(lora_path):
     except Exception as e:
         return f"❌ LoRA load failed: {str(e)}"
 
-def offload_model():
+def _offload_model():
     global model, tokenizer, current_lora
 
     try:
@@ -151,8 +148,8 @@ def chat_fn(message, history):
     generation_kwargs = dict(
         **inputs,
         streamer=streamer,
-        max_new_tokens=1024,
-        do_sample=False,
+        max_new_tokens=4096,
+        do_sample=True,
         temperature=0.7,
         top_p=0.9,
         pad_token_id=tokenizer.eos_token_id
@@ -168,7 +165,7 @@ def chat_fn(message, history):
         for new_text in streamer:
             full_generated_text += new_text
 
-            if "<think>" in full_generated_text and "</think>" in full_generated_text:
+            if "</think>" in full_generated_text:
                 think_context, full_generated_text = extract_think(full_generated_text)
                 think_context = Think_Template.format(think=think_context)
                 full_generated_text = think_context + "\n" + full_generated_text
@@ -221,9 +218,9 @@ with gr.Blocks(title="LLM WebUI", fill_height=True) as demo:
         autoscroll=False
     )
 
-    load_btn.click(load_model, inputs=model_path_input, outputs=status_box)
-    load_lora_btn.click(load_lora, inputs=lora_path_input, outputs=status_box)
-    offload_btn.click(offload_model, outputs=status_box)
+    load_btn.click(_load_model, inputs=model_path_input, outputs=status_box)
+    load_lora_btn.click(_load_lora, inputs=lora_path_input, outputs=status_box)
+    offload_btn.click(_offload_model, outputs=status_box)
 
 
 if __name__ == "__main__":

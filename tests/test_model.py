@@ -1,17 +1,11 @@
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-model_id = "/home/tanger/workspace/models/Falcon-H1-7B-Instruct"
+from model import load_model
 
-# load tokenizer
-tokenizer = AutoTokenizer.from_pretrained(model_id)
+model_path = "/home/tanger/workspace/models/Qwen3-VL-4B-Instruct"
 
-# load model
-model = AutoModelForCausalLM.from_pretrained(
-    model_id,
-    torch_dtype=torch.bfloat16,
-    device_map="auto",
-)
+model, tokenizer = load_model(model_path)
 
 model.eval()
 
@@ -28,7 +22,10 @@ text = tokenizer.apply_chat_template(
     messages,
     tokenize=False,
     add_generation_prompt=True,
+    # enable_thinking=False
 )
+
+print(f"text: {text}")
 
 # tokenize
 inputs = tokenizer(
@@ -40,16 +37,17 @@ inputs = tokenizer(
 with torch.no_grad():
     outputs = model.generate(
         **inputs,
-        max_new_tokens=256,
-        do_sample=False,
+        max_new_tokens=2048,
+        do_sample=True,
         temperature=0.7,
         top_p=0.9,
+        pad_token_id=tokenizer.eos_token_id
     )
 
 # decode only generated part
 response = tokenizer.decode(
     outputs[0][inputs.input_ids.shape[1]:],
-    skip_special_tokens=True
+    skip_special_tokens=False
 )
 
 print("\nAssistant:")
