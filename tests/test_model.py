@@ -17,11 +17,15 @@ messages = [
         "content": [
             {
                 "type": "image",
-                "image": "test.png",
+                "image": "/home/tanger/workspace/Tunix/data/robot/images/ameca_9.png",
+            },
+            {
+                "type": "image",
+                "image": "/home/tanger/workspace/Tunix/data/robot/images/leju_kuafu_2.png",
             },
             {
                 "type": "text",
-                "text": "描述这张图片。",
+                "text": "分析这两张图片！",
             },
         ],
     }
@@ -48,7 +52,7 @@ streamer = TextIteratorStreamer(
 # generation kwargs
 generation_kwargs = dict(
     **inputs,
-    max_new_tokens=128,
+    max_new_tokens=40960,
     streamer=streamer,
 )
 
