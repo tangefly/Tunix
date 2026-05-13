@@ -10,7 +10,7 @@ from transformers import (
     TextIteratorStreamer,
 )
 
-from model import load_model
+from tunix.model import load_model
 
 model = None
 tokenizer = None
@@ -225,6 +225,7 @@ def chat_fn(message, image, history):
     if is_multimodal:
         text = processor.apply_chat_template(prompt_messages, tokenize=False, add_generation_prompt=True)
 
+        print(f"text: {text}")
         if image is not None:
             inputs = processor(
                 text=[text],
@@ -296,6 +297,8 @@ def chat_fn(message, image, history):
             ]
 
         thread.join()
+
+    print(f"history: {history}")
 
 with gr.Blocks(title="LLM WebUI", fill_height=True) as demo:
 

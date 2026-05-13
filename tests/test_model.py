@@ -9,17 +9,7 @@ from tunix.model import load_model
 
 model_path = "/home/tanger/workspace/models/Qwen3-VL-4B-Instruct"
 
-# load model
-model = Qwen3VLForConditionalGeneration.from_pretrained(
-    model_path,
-    torch_dtype="auto",
-    device_map="auto",
-)
-
-# load processor
-processor = AutoProcessor.from_pretrained(model_path)
-
-model, processor = load_model(model_path)
+model, tokenizer, processor = load_model(model_path)
 
 messages = [
     {

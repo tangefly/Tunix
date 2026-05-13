@@ -17,9 +17,9 @@ from peft import (
     TaskType,
 )
 
-from data.preprocess import SFTProcessor
-from data.dataset import SFTDataset
-from data.collator import SFTCollator
+from .data.preprocess import SFTProcessor
+from .data.dataset import SFTDataset
+from .data.collator import SFTCollator
 
 
 # =========================
