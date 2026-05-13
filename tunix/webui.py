@@ -298,8 +298,6 @@ def chat_fn(message, image, history):
 
         thread.join()
 
-    print(f"history: {history}")
-
 with gr.Blocks(title="LLM WebUI", fill_height=True) as demo:
 
     gr.Markdown("# 🧠 LLM Chat WebUI")

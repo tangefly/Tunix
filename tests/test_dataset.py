@@ -13,11 +13,11 @@ data = [
                 "content": [
                     {
                         "type": "image",
-                        "image": "/home/tanger/workspace/Tunix/data/robot/images/ameca_9.png",
+                        "image": "/home/xiaoxunpeng/workspace/Tunix/data/robot/images/ameca_9.png",
                     },
                     {
                         "type": "image",
-                        "image": "/home/tanger/workspace/Tunix/data/robot/images/leju_kuafu_2.png",
+                        "image": "/home/xiaoxunpeng/workspace/Tunix/data/robot/images/leju_kuafu_2.png",
                     },
                     {
                         "type": "text",
@@ -34,7 +34,7 @@ data = [
 ]
 
 processor = SFTProcessor(
-    model_name="/home/tanger/workspace/models/Qwen3-VL-4B-Instruct",
+    model_name="/home/xiaoxunpeng/workspace/models/Qwen/Qwen3-VL-4B-Instruct",
 )
 
 dataset = SFTDataset(

@@ -7,11 +7,11 @@ from transformers import (
 
 from tunix.model import load_model
 
-model_path = "/home/tanger/workspace/models/Qwen3-VL-4B-Instruct"
+model_path = "/home/xiaoxunpeng/workspace/models/Qwen/Qwen3-VL-4B-Instruct"
 
 model, tokenizer, processor = load_model(model_path)
 
-messages = [
+messages1 = [
     {
         "role": "user",
         "content": [
@@ -31,14 +31,36 @@ messages = [
     }
 ]
 
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "text",
+                "text": "hello",
+            },
+        ],
+    }
+]
+
 # build inputs
-inputs = processor.apply_chat_template(
+# inputs = tokenizer.apply_chat_template(
+#     messages,
+#     tokenize=True,
+#     add_generation_prompt=True,
+#     return_dict=True,
+#     return_tensors="pt",
+# )
+
+text = tokenizer.apply_chat_template(
     messages,
-    tokenize=True,
+    tokenize=False,
     add_generation_prompt=True,
-    return_dict=True,
-    return_tensors="pt",
 )
+
+# inputs = tokenizer(text, add_special_tokens=False, return_tensors="pt").input_ids
+
+inputs = tokenizer(text, add_special_tokens=False).input_ids
 
 inputs = inputs.to(model.device)
 
