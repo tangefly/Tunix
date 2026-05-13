@@ -21,10 +21,7 @@ from .data.preprocess import SFTProcessor
 from .data.dataset import SFTDataset
 from .data.collator import SFTCollator
 
-
-# =========================
 # Config
-# =========================
 
 MODEL_NAME = "/home/tanger/workspace/models/Qwen3-4B"
 DATA_PATH = "/home/tanger/workspace/Tunix/data/ruozhiba.json"
@@ -35,11 +32,6 @@ MAX_LENGTH = 2048
 BATCH_SIZE = 2
 LR = 1e-4
 EPOCHS = 5
-
-
-# =========================
-# Load Data
-# =========================
 
 with open(DATA_PATH, "r", encoding="utf-8") as f:
     data = json.load(f)
@@ -65,30 +57,14 @@ loader = DataLoader(
     collate_fn=collator,
 )
 
-
-# =========================
-# Load Model
-# =========================
-
-model = AutoModelForCausalLM.from_pretrained(
-    MODEL_NAME,
-    torch_dtype=torch.bfloat16,
-)
+model = AutoModelForCausalLM.from_pretrained(MODEL_NAME, torch_dtype=torch.bfloat16)
 
 model.to(DEVICE)
-
 model.gradient_checkpointing_enable()
-
-# 推荐
 model.enable_input_require_grads()
 
 # 关闭 cache
 model.config.use_cache = False
-
-
-# =========================
-# LoRA
-# =========================
 
 lora_config = LoraConfig(
     task_type=TaskType.CAUSAL_LM,
@@ -104,58 +80,27 @@ lora_config = LoraConfig(
     ],
 )
 
-model = get_peft_model(
-    model,
-    lora_config,
-)
-
+model = get_peft_model(model, lora_config)
 model.print_trainable_parameters()
-
 model.train()
 
-
-# =========================
-# Optimizer
-# =========================
-
-optimizer = torch.optim.AdamW(
-    model.parameters(),
-    lr=LR,
-)
-
-
-# =========================
-# Train
-# =========================
+optimizer = torch.optim.AdamW(model.parameters(), lr=LR)
 
 loss_list = []
 global_step = 0
 
 for epoch in range(EPOCHS):
 
-    progress_bar = tqdm(
-        loader,
-        desc=f"Epoch {epoch + 1}/{EPOCHS}",
-    )
-
+    progress_bar = tqdm(loader, desc=f"Epoch {epoch + 1}/{EPOCHS}")
     epoch_loss = 0.0
-
     for step, batch in enumerate(progress_bar):
 
         input_ids = batch["input_ids"].to(DEVICE)
         labels = batch["labels"].to(DEVICE)
         attention_mask = batch["attention_mask"].to(DEVICE)
 
-        with torch.autocast(
-            device_type="cuda",
-            dtype=torch.bfloat16,
-        ):
-            outputs = model(
-                input_ids=input_ids,
-                attention_mask=attention_mask,
-                labels=labels,
-            )
-
+        with torch.autocast(device_type="cuda", dtype=torch.bfloat16,):
+            outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
             loss = outputs.loss
 
         loss.backward()
@@ -163,21 +108,12 @@ for epoch in range(EPOCHS):
         optimizer.step()
         optimizer.zero_grad()
 
-        # 当前 loss
         current_loss = loss.item()
-
-        # 累计
         epoch_loss += current_loss
-
-        # 平均 loss
         avg_loss = epoch_loss / (step + 1)
-
-        # 保存
         loss_list.append(avg_loss)
-
         global_step += 1
 
-        # tqdm 显示
         progress_bar.set_postfix({
             "loss": f"{current_loss:.4f}",
             "avg_loss": f"{avg_loss:.4f}",
@@ -185,37 +121,16 @@ for epoch in range(EPOCHS):
 
     print(f"\nEpoch {epoch + 1} Average Loss: {avg_loss:.4f}")
 
-
-# =========================
-# Save LoRA
-# =========================
-
 model.save_pretrained(SAVE_PATH)
 tokenizer.save_pretrained(SAVE_PATH)
 
 print(f"\nLoRA saved to: {SAVE_PATH}")
 
-
-# =========================
-# Draw Loss Curve
-# =========================
-
 plt.figure(figsize=(10, 5))
-
 plt.plot(loss_list)
-
 plt.xlabel("Step")
-
 plt.ylabel("Average Loss")
-
 plt.title("Training Loss Curve")
-
 plt.grid(True)
-
-plt.savefig(
-    LOSS_PLOT_PATH,
-    dpi=300,
-    bbox_inches="tight",
-)
-
+plt.savefig(LOSS_PLOT_PATH, dpi=300, bbox_inches="tight",)
 print(f"Loss curve saved to: {LOSS_PLOT_PATH}")
