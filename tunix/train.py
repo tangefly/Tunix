@@ -24,13 +24,13 @@ from data import SFTCollator
 
 # Config
 
-MODEL_NAME = "/home/xiaoxunpeng/workspace/models/Qwen/Qwen3-VL-4B-Instruct"
-DATA_PATH = "/home/xiaoxunpeng/workspace/Tunix/data/robot/mllm_robot.json"
-SAVE_PATH = "./qwen3_vl_lora"
+MODEL_NAME = "/home/tanger/workspace/models/Qwen3.5-2B"
+DATA_PATH = "/home/tanger/workspace/Tunix/data/robot/mllm_robot.json"
+SAVE_PATH = "./qwen3_5_lora"
 LOSS_PLOT_PATH = "./loss_curve.png"
 DEVICE = "cuda"
 MAX_LENGTH = 1024
-BATCH_SIZE = 1
+BATCH_SIZE = 4
 LR = 1e-4
 EPOCHS = 5
 

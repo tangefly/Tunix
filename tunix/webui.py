@@ -61,6 +61,9 @@ def check_multimodal(model, processor):
     if hasattr(processor, "image_processor"):
         return True
 
+    if hasattr(processor, "video_processor"):
+        return True
+
     return False
 
 def _load_model(model_path):
@@ -90,6 +93,7 @@ def _load_model(model_path):
 
         return (
             f"✅ Base model loaded: {model_path}",
+            gr.update(visible=is_multimodal),
             gr.update(visible=is_multimodal)
         )
 
@@ -97,6 +101,7 @@ def _load_model(model_path):
 
         return (
             f"❌ Load failed: {str(e)}",
+            gr.update(visible=False),
             gr.update(visible=False)
         )
 
@@ -170,7 +175,7 @@ def _offload_model():
         return f"❌ Offload failed: {str(e)}"
 
 
-def build_messages(history, message, image):
+def build_messages(history, message, image, video):
 
     prompt_messages = []
 
@@ -183,19 +188,19 @@ def build_messages(history, message, image):
         elif item["role"] == "user":
             prompt_messages.append(item)
 
-    if image is not None:
+    if image is not None or video is not None:
+        content = []
+        if image is not None:
+            content.append({"type": "image", "image": image})
+        if video is not None:
+            content.append({"type": "video", "video": video})
+        content.append({"type": "text", "text": message})
+
+        print(content)
+
         prompt_messages.append({
             "role": "user",
-            "content": [
-                {
-                    "type": "image",
-                    "image": image
-                },
-                {
-                    "type": "text",
-                    "text": message
-                }
-            ]
+            "content": content
         })
     else:
         prompt_messages.append({
@@ -206,7 +211,7 @@ def build_messages(history, message, image):
     return prompt_messages
 
 
-def chat_fn(message, image, history):
+def chat_fn(message, image, video, history):
 
     global model
     global processor
@@ -220,23 +225,18 @@ def chat_fn(message, image, history):
         ]
         return
 
-    prompt_messages = build_messages(history, message, image)
+    prompt_messages = build_messages(history, message, image, video)
 
     if is_multimodal:
         text = processor.apply_chat_template(prompt_messages, tokenize=False, add_generation_prompt=True)
 
-        print(f"text: {text}")
+        processor_kwargs = {"text": [text], "return_tensors": "pt"}
         if image is not None:
-            inputs = processor(
-                text=[text],
-                images=[image],
-                return_tensors="pt"
-            ).to(model.device)
-        else:
-            inputs = processor(
-                text=[text],
-                return_tensors="pt"
-            ).to(model.device)
+            processor_kwargs["images"] = [image]
+        if video is not None:
+            processor_kwargs["videos"] = [video]
+
+        inputs = processor(**processor_kwargs).to(model.device)
     else:
         text = tokenizer.apply_chat_template(
             prompt_messages,
@@ -320,7 +320,7 @@ with gr.Blocks(title="LLM WebUI", fill_height=True) as demo:
     with gr.Row():
 
         with gr.Column(scale=3):
-            chatbot = gr.Chatbot(type="messages", height=500)
+            chatbot = gr.Chatbot(type="messages", height=500, autoscroll=False)
             with gr.Row():
                 msg_input = gr.Textbox(
                     placeholder="请输入内容...",
@@ -336,9 +336,16 @@ with gr.Blocks(title="LLM WebUI", fill_height=True) as demo:
                 label="Image",
                 visible=False,
                 height=256,
-                width=256,
                 show_download_button=False,
                 show_fullscreen_button=False
+            )
+
+            video_input = gr.Video(
+                label="Video",
+                visible=False,
+                interactive=True,
+                height=256,
+                show_download_button=False,
             )
 
     prompt_state = gr.State("")
@@ -355,10 +362,10 @@ with gr.Blocks(title="LLM WebUI", fill_height=True) as demo:
         outputs=[prompt_state, msg_input]
     ).then(
         fn=chat_fn,
-        inputs=[prompt_state, image_input, chatbot],
+        inputs=[prompt_state, image_input, video_input, chatbot],
         outputs=chatbot
     )
-    load_btn.click(fn=_load_model, inputs=model_path_input, outputs=[status_box, image_input])
+    load_btn.click(fn=_load_model, inputs=model_path_input, outputs=[status_box, image_input, video_input])
     load_lora_btn.click(fn=_load_lora, inputs=lora_path_input, outputs=status_box)
     offload_btn.click(fn=_offload_model, outputs=status_box)
 
