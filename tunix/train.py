@@ -26,7 +26,7 @@ from data import SFTCollator
 
 MODEL_NAME = "/home/tanger/workspace/models/Qwen3.5-2B"
 DATA_PATH = "/home/tanger/workspace/Tunix/data/robot/mllm_robot.json"
-SAVE_PATH = "./qwen3_5_lora"
+SAVE_PATH = "../result/qwen3_5_lora"
 LOSS_PLOT_PATH = "./loss_curve.png"
 DEVICE = "cuda"
 MAX_LENGTH = 1024
